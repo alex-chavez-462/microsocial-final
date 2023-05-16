@@ -17,7 +17,6 @@
  *       type: integer
  *       minimum: 1
  *       readOnly: true
- *            
  * 
  *     User:
  *       type: object
@@ -47,8 +46,15 @@
  *           readOnly: true
  *           format: password
  *           description: URI to this object. Set by API at User creation.
+ *         phone:
+ *           type: string
+ *           readOnly: true
+ *           minLength: 9
+ *           maxLength: 15
+ *           pattern: '^[0-9]{9,15}$'
+ *           description: Phone number for authorization. Tied to auth app as well.
  *       examples: [
- *         { id: 1, name: "alonzo", password: "lambda", uri: "http://lh:8/user/14" }
+ *         { id: 1, name: "alonzo", password: "lambda", uri: "http://lh:8/user/14, phone: "1347455420" }
  *       ]
  * 
  *     LoginInfo:
