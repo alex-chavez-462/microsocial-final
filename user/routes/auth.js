@@ -145,7 +145,13 @@ function app_setup () {
  *         description: Login Required
  */
 router.post('/auth/token', async (req, res) => {
-  const { client_id, refresh_token: old_refresh_token_id } = req.body
+  token_info = req.body
+
+  // XML adds an outer wrapper
+  if ('token_info' in token_info) {
+    token_info = token_info.token_info
+  }
+  const { client_id, refresh_token: old_refresh_token_id } = token_info
 
   console.log({ client_id, old_refresh_token_id })
   var old_refresh_token
@@ -233,7 +239,12 @@ router.post('/auth/token', async (req, res) => {
  *         description: Login Failed
  */
 router.post('/auth/login', async (req, res) => {
-  const login_info = req.body
+  login_info = req.body
+
+  // XML adds an outer wrapper
+  if ('credentials' in login_info) {
+    login_info = login_info.credentials
+  }
 
   const errors = validate.LoginInfo(login_info, '{body}')
   if (errors.length != 0) {
