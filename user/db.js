@@ -8,6 +8,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS users (
         password TEXT NOT NULL,
         versionkey INTEGER NOT NULL DEFAULT 1
     );`)
+
+db.exec(`CREATE TABLE IF NOT EXISTS user_2fa (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        two_factor_type STRING
+    );`)
+
 db.exec(`CREATE TABLE IF NOT EXISTS users_result_sets (
         set_id INTEGER PRIMARY KEY AUTOINCREMENT,
         set_session_id TEXT,
@@ -25,6 +32,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS refresh_tokens (
         issued TEXT,
         expires TEXT
     )`)
+
 
 // I have no idea why I had to do this. The get() is NOT defined in my DB for some reason. This polyfills it. BJM 4/15/23
 db.get = (stmt, params) => {

@@ -1,100 +1,97 @@
 // options: none, auth, call, sms
-// auth will use an authenticator app
-
-// dependencies 
-const axios = require('axios');
-const speakeasy = require('speakeasy');
 
 var express = require('express');
 var router = express.Router();
 module.exports.router = router;
-
-// generate 6-digit auth code (10^6 permutations)
-// -> remove possibility of 6 identical digits
-function generate_auth_code() {
-    let code;
-    do{
-        code = Math.floor(100000 + Math.random() * 900000);
-    } while(code == 000000 || code == 111111 || code == 222222 || code == 333333 || 
-            code == 444444 || code == 555555 || code == 666666 ||
-            code == 777777 || code == 888888 || code == 999999);
-        // sure, it's a 1 in 1000000 chance, but it's not 0%
-        // not the cleanest but I feel like this is easier than making a whole ass function 
-        // i'd probably confuse myself that way tbh
-    return code;
-}
-
-// all methods use a single code, generated after each request. i dont wanna make multiple.
-function verify(generated, user_input) {
-    return generated == user_input;
-}
-
-// Send codes via selected method
-
-// SMS
-function send_sms(phone_number) {
-    console.log("Sent code to ${phone_number}.");
-}
-
-// call
-function place_call(phone_number) {
-    console.log("Calling ${phone_number}...")
-}
-
-// auth app
-// pretend it makes sense to use a phone number anyway
-function auth_app(phone_number) {
-    console.log("Enter One-Time Passcode in authentication app.")
-}
-
-// no verification
-function no_auth() {
-    return null;
-}
-
-function authenticate(phone_number, user_input) {
-    const code = generate_auth_code();
-
-    if (method === 'sms') { 
-        // SMS 
-        send_sms(phone_number);
-        return verify(code, user_input);
-    } else if (method === 'call') {
-        // Call
-        place_call(phone_number); 
-        return verify(code, user_input);
-    } else if (method === 'auth') { 
-        // Auth app
-        auth_app(phone_number);
-        return verify(code, user_input);
-    } else { 
-        // User likes a bit of danger (no 2fa)
-        console.log("If you get hacked it's all on you.")
-        return no_auth();
-    }
-}
+var { db } = require('../db')
 
 /**
  * @swagger
- * /2FA/authenticate/{auth_code}:
+ * /users/2fa:
  *   post:
- *     summary: Verify user via 2FA.
- *     description: Via the selected verification option, user receives a code. Auth code is then verified by comparing to 
- *     operationId: generateCode
- *     tags: [2FA API]
+ *     summary: Post a 2FA method!
+ *     tags: [Users API]
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
- *           required: true
  *           schema:
- *              $ref: '#/components/schemas/User'
+ *             type: object
+ *             properties:
+ *               user_id:
+ *                 type: integer
+ *               two_factor_type:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Success
+ *       400:
+ *         description: Invalid
+ */
+router.post('/users/2fa', async (req, res) => {
+    const { user_id, two_factor_type } = req.body
+    const q = db.prepare(
+      `INSERT INTO user_2fa (user_id, two_factor_type) VALUES(?, ?);`
+    )
+    q.run(user_id, two_factor_type)
+  
+    res.status(201).json({ message: 'success' })
+})
+
+/**
+ * @swagger
+ * /users/2fa:
+ *   put:
+ *     summary: Update a 2fa!
+ *     tags: [Users API]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               user_id:
+ *                 type: integer
+ *               two_factor_type:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: successfully
+ *       400:
+ *         description: Invalid input data
+ */
+router.put('/users/2fa', (req, res) => {
+    const { user_id, two_factor_type } = req.body
+
+    const q = db.prepare(`UPDATE user_2fa SET two_factor_type=? WHERE user_id=?`)
+    const result = q.run(two_factor_type, user_id).changes
+  
+    if (result > 0) res.status(204).json({ message: 'Success' })
+    else res.status(400).json({ error: 'Id not found' })
+})
+
+/**
+ * @swagger
+ * /user/2fa/{user_id}:
+ *   get:
+ *     summary: Get two factor authentication type!
+ *     parameters:
+ *       - name: user_id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     tags: [Users API]
  *     responses:
  *       200:
- *         description: Authentication Successful.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       403:
- *         description: Authentication unsuccessful.
+ *         description: Get two factor auth type
  */
+router.get('/user/2fa/:user_id', (req, res) => {
+    const { user_id } = req.params
+    if (!user_id) return res.status(400).json({ error: "User ID not found" })
+  
+    const q = db.prepare(`SELECT * FROM user_2fa WHERE user_id=?`)
+    const result = q.all(user_id)
+    return res.status(200).json({ result: result })
+})
